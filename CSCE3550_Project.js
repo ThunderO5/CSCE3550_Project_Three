@@ -1,6 +1,6 @@
-import HTTP from "http";           //Imports HTTP Module for Server
+import http from "http";           //Imports HTTP Module for Server
 import crypto from "crypto";       //Imports Crypto Module for RSA Implementation
-import {v4 as uuidv4} from "uuid";  //Imports UUID Module for Unique IDS
+import {v4 as uuidv4} from 'uuid';  //Imports UUID Module for Unique IDS
 import jwt from "jsonwebtoken";    // Imports JTW for JTW Functionality
 const HOSTNAME = "127.0.0.1";           //Hostname for the Server
 const PORT = 8080;                      //The Port of the Server for Incoming Requests
@@ -100,18 +100,22 @@ function handleAuth(req, res, url)
         keyid: key.kid,
     });
 
-    res.writeHead(405, {'Content-Type' : 'application/json'});
+    res.writeHead(200, {'Content-Type' : 'application/json'});
     res.end(JSON.stringify({token}));
 }
 
 //Section 5 - The Main Server
 //Server is created
-const server = HTTP.createServer((req, res) => {
+const server = http.createServer((req, res) => {
     //Created URL for the Server
-    const url = new URL(req.url, `https://${req.headers.host}`);
+    const url = new URL(req.url, `http://${req.headers.host}`);
 
     //Goes to Different URL Paths
-    if (url.pathname === '/.well-known/jwks.json' && req.method === "GET")
+    if (url.pathname === '/' && req.method === 'GET') {
+        res.writeHead(200, {'Content-Type' : 'text/plain'});
+        res.end("Welcome to the JWKS Server! Visit /.well-known/jwks.json to see the keys.");
+    }
+    else if (url.pathname === '/.well-known/jwks.json' && req.method === "GET")
     {
         const jwks = getJWKS();
         res.writeHead(200, {'Content-Type' : 'application/json'});
@@ -132,11 +136,3 @@ const server = HTTP.createServer((req, res) => {
 server.listen(PORT, HOSTNAME, () => {
     console.log(`Server running at http://${HOSTNAME}:${PORT}`);    //Main Page
 });
-
-export {
-    generateKeyPair,
-    publicKeyToJWK,
-    getJWKS,
-    handleAuth,
-    keys
-};
