@@ -33,7 +33,8 @@ function storePrivateKeys()
     //Prints info for stuff
     for (let i = 0; i < keys.length; i++)
     {
-        DB.run("INSERT INTO keys(privateKey, exp) VALUES(?, ?)", [keys[i].privateKey, keys[i].expiresAt]);
+        let encryptedPrivateKey = encryptPrivateKeys(keys[i].privateKey);
+        DB.run("INSERT INTO keys(privateKey, exp) VALUES(?, ?)", [encryptedPrivateKey, keys[i].expiresAt]);
     }
 }
 
@@ -62,10 +63,13 @@ let keys = [];
 keys.push(generateKeyPair(false));
 keys.push(generateKeyPair(true));
 
-//Functionality Five - Encrypting
-function encryptPrivateKeys()
+//Functionality Five - Encrypting Private Keys
+function encryptPrivateKeys(text)
 {
-    
+    let cipher = crypto.createCipheriv("aes-128-cbc", "1272025448679420", "1272025448679420");
+    let encrypted = cipher.update(text, "utf8", "hex");
+    encrypted += cipher.final("hex");
+    return encrypted;
 }
 
 //Functionality Five - Serve the JWKS
