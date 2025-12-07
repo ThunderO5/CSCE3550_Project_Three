@@ -23,7 +23,7 @@ function generateKeyPair(isExpired = false)
         kid: uuidv4(),
         publicKey,
         privateKey,
-        expiresAt: isExpired ? Date.now() - 60 * 1000 : Date.now() + 5 * 60 * 1000
+        expiresAt: isExpired ? Date.now() - (60 * 1000) : Date.now() + (5 * 60 * 1000)
     };
 }
 
@@ -65,7 +65,7 @@ function getJWKS()
 }
 
 //Fuctionality Five - Handling Autherization
-function handleAuth(req, res, url)
+function handleAuth(res, url)
 {
     //Checks if the URL's keys are expired
     const expired = url.searchParams.get("expired") === "true";
@@ -131,7 +131,13 @@ const server = http.createServer((req, res) => {
     //Auth Page
     else if (url.pathname === '/auth' && req.method === 'POST')
     {
-        handleAuth(req, res, url);
+        handleAuth(res, url);
+    }
+    else if (url.pathname === "/register" && req.method === "POST")
+    {
+        userRegister();
+        res.writeHead(200, {"Content-Type" : "text/plain"});
+        res.end();
     }
     //Error Page
     else
@@ -150,6 +156,18 @@ function storePrivateKeys()
         DB.run("INSERT INTO keys(privateKey, exp) VALUES(?, ?)", [keys[i].privateKey, keys[i].expiresAt]);
     }
 }
+
+/*
+//Functionality Nine - Store user registration data to Users table in the database
+function userRegister()
+{
+    const payload = {
+        userName: "$MyCoolUsername",
+        email: "$MyCoolEmail"
+    };
+
+    DB.run("INSERT INTO users(username, password_hash, email, data_registered, last_login) VALUES(?, ?, ?, ?, ?)", [payload.userName, " ", payload.email, Date.now(), Date.now]);
+}*/
 
 storePrivateKeys();
 
