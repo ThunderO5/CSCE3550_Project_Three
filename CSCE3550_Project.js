@@ -1,9 +1,11 @@
-import http from "http";           //Imports HTTP Module for Server
-import crypto from "crypto";       //Imports Crypto Module for RSA Implementation
-import {v4 as uuidv4} from 'uuid';  //Imports UUID Module for Unique IDS
-import jwt from "jsonwebtoken";    // Imports JTW for JTW Functionality
+import http from "http";                //Imports HTTP Module for Server
+import crypto from "crypto";            //Imports Crypto Module for RSA Implementation
+import {v4 as uuidv4} from 'uuid';      //Imports UUID Module for Unique IDS
+import jwt from "jsonwebtoken";         //Imports JTW Module for JTW Functionality
+import sqlite from "sqlite";            //Imports SQLite Module for Database Functionality 
 const HOSTNAME = "127.0.0.1";           //Hostname for the Server
 const PORT = 8080;                      //The Port of the Server for Incoming Requests
+const DB = new sqlite3.Database("./totally_not_my_privateKeys.db");
 
 //Functionality One - Generate RSA Key Pair
 function generateKeyPair(isExpired = false)
@@ -138,6 +140,12 @@ const server = http.createServer((req, res) => {
         res.end("Method Not Allowed");
     }
 });
+
+//Functionality Eight - Store Private Keys to the SQLite Database
+function storePrivateKeys()
+{
+    
+}
 
 //Fuctionality Seven - Opens Up the Server
 server.listen(PORT, HOSTNAME, () => {
