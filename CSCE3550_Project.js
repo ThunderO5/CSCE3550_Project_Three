@@ -27,7 +27,17 @@ function generateKeyPair(isExpired = false)
     };
 }
 
-//Functionality Two - Public Key to JWKS Format
+//Functionality Two - Store Private Keys to the SQLite Database
+function storePrivateKeys()
+{
+    //Prints info for stuff
+    for (let i = 0; i < keys.length; i++)
+    {
+        DB.run("INSERT INTO keys(privateKey, exp) VALUES(?, ?)", [keys[i].privateKey, keys[i].expiresAt]);
+    }
+}
+
+//Functionality Three - Public Key to JWKS Format
 function publicKeyToJWK(publicKeyPem, kid)
 {
     //Creates a Public Key
@@ -47,12 +57,13 @@ function publicKeyToJWK(publicKeyPem, kid)
     };
 }
 
-//Fuctionality Three - Store Keys
+//Fuctionality Four - Generate Keys and Store Private Keys to Database
 let keys = [];
 keys.push(generateKeyPair(false));
 keys.push(generateKeyPair(true));
+storePrivateKeys();
 
-//Functionality Four - Serve the JWKS
+//Functionality Five - Serve the JWKS
 function getJWKS()
 {
     //Create an array of valid keys
@@ -64,7 +75,7 @@ function getJWKS()
     };
 }
 
-//Fuctionality Five - Handling Autherization
+//Fuctionality Six - Handling Autherization
 function handleAuth(res, url)
 {
     //Checks if the URL's keys are expired
@@ -110,7 +121,19 @@ function handleAuth(res, url)
     res.end(JSON.stringify({token}));
 }
 
-//Functionality Six - The Main Server Function
+/*
+//Functionality Seven - Store user registration data to Users table in the database
+function userRegister()
+{
+    const payload = {
+        userName: "$MyCoolUsername",
+        email: "$MyCoolEmail"
+    };
+
+    DB.run("INSERT INTO users(username, password_hash, email, data_registered, last_login) VALUES(?, ?, ?, ?, ?)", [payload.userName, " ", payload.email, Date.now(), Date.now]);
+}*/
+
+//Functionality Eight - The Main Server Function
 const server = http.createServer((req, res) => {
     //Creates URL for JWKS Server
     const url = new URL(req.url, `http://${req.headers.host}`);
@@ -147,31 +170,7 @@ const server = http.createServer((req, res) => {
     }
 });
 
-//Functionality Eight - Store Private Keys to the SQLite Database
-function storePrivateKeys()
-{
-    //Prints info for stuff
-    for (let i = 0; i < keys.length; i++)
-    {
-        DB.run("INSERT INTO keys(privateKey, exp) VALUES(?, ?)", [keys[i].privateKey, keys[i].expiresAt]);
-    }
-}
-
-/*
-//Functionality Nine - Store user registration data to Users table in the database
-function userRegister()
-{
-    const payload = {
-        userName: "$MyCoolUsername",
-        email: "$MyCoolEmail"
-    };
-
-    DB.run("INSERT INTO users(username, password_hash, email, data_registered, last_login) VALUES(?, ?, ?, ?, ?)", [payload.userName, " ", payload.email, Date.now(), Date.now]);
-}*/
-
-storePrivateKeys();
-
-//Fuctionality Seven - Opens Up the Server
+//Fuctionality Nine - Opens Up the Server
 server.listen(PORT, HOSTNAME, () => {
     console.log(`Server running at http://${HOSTNAME}:${PORT}`);
 });
