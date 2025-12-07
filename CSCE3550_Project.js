@@ -25,7 +25,7 @@ function generateKeyPair(isExpired = false)
     };
 }
 
-//Section 2 - Public Key to JWKS Format
+//Functionality Two - Public Key to JWKS Format
 function publicKeyToJWK(publicKeyPem, kid)
 {
     //Creates a Public Key
@@ -45,21 +45,24 @@ function publicKeyToJWK(publicKeyPem, kid)
     };
 }
 
-//Section 3 - Store Keys and Serve the JWKS
+//Fuctionality Three - Store Keys
 let keys = [];
 keys.push(generateKeyPair(false));
 keys.push(generateKeyPair(true));
 
+//Functionality Four - Serve the JWKS
 function getJWKS()
 {
+    //Create an array of valid keys
     const validKeys = keys.filter(k => k.expiresAt > Date.now());
 
+    //Returns keys for the server
     return {
         keys: validKeys.map(k => publicKeyToJWK(k.publicKey, k.kid))
     };
 }
 
-//Section 4 - Handling Autherization
+//Fuctionality Five - Handling Autherization
 function handleAuth(req, res, url)
 {
     //Checks if the URL's keys are expired
@@ -73,11 +76,11 @@ function handleAuth(req, res, url)
     }
     else
     {
-        //Keys are Expired
+        //Keys are NOT Expired
         key = keys.find(k => k.expiresAt > Date.now());
     }
 
-    //Key is Not Found
+    //Key is NOT Found
     if (!key)
     {
         res.writeHead(500, {'Content-Type' : 'application/json'});
@@ -85,6 +88,7 @@ function handleAuth(req, res, url)
         return;
     }
 
+    //Calculates the current now time in seconds
     const now = Math.floor((Date.now() / 1000));
 
     //Data to Transfer
@@ -104,27 +108,30 @@ function handleAuth(req, res, url)
     res.end(JSON.stringify({token}));
 }
 
-//Section 5 - The Main Server
-//Server is created
+//Functionality Six - The Main Server Function
 const server = http.createServer((req, res) => {
-    //Created URL for the Server
+    //Creates URL for JWKS Server
     const url = new URL(req.url, `http://${req.headers.host}`);
 
-    //Goes to Different URL Paths
+    //Directs user to different pages in Server
+    //Main Page
     if (url.pathname === '/' && req.method === 'GET') {
         res.writeHead(200, {'Content-Type' : 'text/plain'});
         res.end("Welcome to the JWKS Server! Visit /.well-known/jwks.json to see the keys.");
     }
+    //Key Page
     else if (url.pathname === '/.well-known/jwks.json' && req.method === "GET")
     {
         const jwks = getJWKS();
         res.writeHead(200, {'Content-Type' : 'application/json'});
         res.end(JSON.stringify(jwks, null, 2));
     }
+    //Auth Page
     else if (url.pathname === '/auth' && req.method === 'POST')
     {
         handleAuth(req, res, url);
     }
+    //Error Page
     else
     {
         res.writeHead(405, {'Content-Type' : 'text/plain'});
@@ -132,7 +139,7 @@ const server = http.createServer((req, res) => {
     }
 });
 
-//Server listens to any connections
+//Fuctionality Seven - Opens Up the Server
 server.listen(PORT, HOSTNAME, () => {
-    console.log(`Server running at http://${HOSTNAME}:${PORT}`);    //Main Page
+    console.log(`Server running at http://${HOSTNAME}:${PORT}`);
 });
