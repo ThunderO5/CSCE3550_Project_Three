@@ -57,11 +57,16 @@ function publicKeyToJWK(publicKeyPem, kid)
     };
 }
 
-//Fuctionality Four - Generate Keys and Store Private Keys to Database
+//Fuctionality Four - Generate Keys
 let keys = [];
 keys.push(generateKeyPair(false));
 keys.push(generateKeyPair(true));
-storePrivateKeys();
+
+//Functionality Five - Encrypting
+function encryptPrivateKeys()
+{
+    
+}
 
 //Functionality Five - Serve the JWKS
 function getJWKS()
@@ -135,6 +140,9 @@ function userRegister()
 
 //Functionality Eight - The Main Server Function
 const server = http.createServer((req, res) => {
+    //Stores Private Keys to the Database before startup
+    storePrivateKeys();
+    
     //Creates URL for JWKS Server
     const url = new URL(req.url, `http://${req.headers.host}`);
 
