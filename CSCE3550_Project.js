@@ -1,6 +1,6 @@
 import http from "http";                //Imports HTTP Module for Server
 import crypto from "crypto";            //Imports Crypto Module for RSA Implementation
-import {v4 as uuidv4} from 'uuid';      //Imports UUID Module for Unique IDS
+import { v4 as uuidv4 } from 'uuid';      //Imports UUID Module for Unique IDS
 import jwt from "jsonwebtoken";         //Imports JTW Module for JTW Functionality
 import sqlite3 from 'sqlite3';          //Imports SQLite3 Module for Database Functionality
 import express from "express";          //Imports Express Module for Connections
@@ -13,15 +13,14 @@ const APP = express();
 APP.use(express.json());
 
 //Functionality One - Generate RSA Key Pair
-function generateKeyPair(isExpired = false)
-{
+function generateKeyPair(isExpired = false) {
     //Defines Public and Private Keys
-    const {publicKey, privateKey} = crypto.generateKeyPairSync("rsa", 
-    {
-        modulusLength: 2048,
-        publicKeyEncoding: {type: "spki", format: "pem"},
-        privateKeyEncoding: {type: "pkcs8", format: "pem"}
-    });
+    const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa",
+        {
+            modulusLength: 2048,
+            publicKeyEncoding: { type: "spki", format: "pem" },
+            privateKeyEncoding: { type: "pkcs8", format: "pem" }
+        });
 
     //Returns the Unique ID, Private and Public Keys, and Expiration Time
     return {
@@ -33,24 +32,21 @@ function generateKeyPair(isExpired = false)
 }
 
 //Functionality Two - Store Private Keys to the SQLite Database
-function storePrivateKeys()
-{
+function storePrivateKeys() {
     //Prints info for stuff
-    for (let i = 0; i < keys.length; i++)
-    {
+    for (let i = 0; i < keys.length; i++) {
         let encryptedPrivateKey = encryptPrivateKeys(keys[i].privateKey);
         DB.run("INSERT INTO keys(key, exp) VALUES(?, ?)", [encryptedPrivateKey, keys[i].expiresAt]);
     }
 }
 
 //Functionality Three - Public Key to JWKS Format
-function publicKeyToJWK(publicKeyPem, kid)
-{
+function publicKeyToJWK(publicKeyPem, kid) {
     //Creates a Public Key
     const publicKeyObj = crypto.createPublicKey(publicKeyPem);
 
     //Converts Public Key to JWK Format
-    const jwk = publicKeyObj.export({format : "jwk"});
+    const jwk = publicKeyObj.export({ format: "jwk" });
 
     //Returns Key Type, Key Id, Use Signature, Algorithm, Modulus, and Exponent
     return {
@@ -69,8 +65,7 @@ keys.push(generateKeyPair(false));
 keys.push(generateKeyPair(true));
 
 //Functionality Five - Encrypting Private Keys
-function encryptPrivateKeys(text)
-{
+function encryptPrivateKeys(text) {
     let cipher = crypto.createCipheriv("aes-128-cbc", "1272025448679420", "1272025448679420");
     let encrypted = cipher.update(text, "utf8", "hex");
     encrypted += cipher.final("hex");
@@ -78,8 +73,7 @@ function encryptPrivateKeys(text)
 }
 
 //Functionality Five - Serve the JWKS
-function getJWKS()
-{
+function getJWKS() {
     //Create an array of valid keys
     const validKeys = keys.filter(k => k.expiresAt > Date.now());
 
@@ -90,28 +84,24 @@ function getJWKS()
 }
 
 //Fuctionality Six - Handling Autherization
-function handleAuth(res, url)
-{
+function handleAuth(res, url) {
     //Checks if the URL's keys are expired
     const expired = url.searchParams.get("expired") === "true";
 
     let key;
-    if (expired)
-    {
+    if (expired) {
         //Keys are Expired
         key = keys.find(k => k.expiresAt < Date.now());
     }
-    else
-    {
+    else {
         //Keys are NOT Expired
         key = keys.find(k => k.expiresAt > Date.now());
     }
 
     //Key is NOT Found
-    if (!key)
-    {
-        res.writeHead(500, {'Content-Type' : 'application/json'});
-        res.end(JSON.stringify({error: "No suitable key found"}));
+    if (!key) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: "No suitable key found" }));
         return;
     }
 
@@ -122,7 +112,7 @@ function handleAuth(res, url)
     const payload = {
         user: "test-user",
         iat: now,
-        exp: expired ? now - 60: now + 5 * 60
+        exp: expired ? now - 60 : now + 5 * 60
     };
 
     //Signs the JWT Token
@@ -131,13 +121,14 @@ function handleAuth(res, url)
         keyid: key.kid,
     });
 
-    res.writeHead(200, {'Content-Type' : 'application/json'});
-    res.end(JSON.stringify({token}));
+
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ token }));
 }
 
 //Functionality Seven - Store user registration data to Users table in the database
-async function userRegister(userData, res)
-{
+async function userRegister(userData, res) {
     //Reads Client's username and email
     const { username, email } = userData;
 
@@ -154,7 +145,7 @@ async function userRegister(userData, res)
     try {
         await new Promise((resolve, reject) => {
             DB.run("INSERT INTO users(username, password_hash, email, date_registered, last_login) VALUES(?, ?, ?, ?, ?)",
-                [username, passwordHash, email, sqlTime, sqlTime], function(err) {
+                [username, passwordHash, email, sqlTime, sqlTime], function (err) {
                     if (err) {
                         console.error("Database INSERT error in userRegister:", err.message);
                         return reject(err);
@@ -164,12 +155,12 @@ async function userRegister(userData, res)
         });
 
         //Returns an OK status, and responds with Userdata info
-        res.writeHead(200, {'Content-Type' : 'application/json'});
-        res.end(JSON.stringify({password}));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ password }));
 
     } catch (err) {
-        res.writeHead(500, {'Content-Type' : 'application/json'});
-        res.end(JSON.stringify({error: "Failed to register user."}));
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: "Failed to register user." }));
     }
 }
 
@@ -184,28 +175,25 @@ const server = http.createServer((req, res) => {
     //Directs user to different pages in Server
     //Main Page
     if (url.pathname === '/' && req.method === 'GET') {
-        res.writeHead(200, {'Content-Type' : 'text/plain'});
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
         res.end("Welcome to the JWKS Server! Visit /.well-known/jwks.json to see the keys.");
     }
     //Key Page
-    else if (url.pathname === '/.well-known/jwks.json' && req.method === "GET")
-    {
+    else if (url.pathname === '/.well-known/jwks.json' && req.method === "GET") {
         const jwks = getJWKS();
-        res.writeHead(200, {'Content-Type' : 'application/json'});
+        res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(jwks, null, 2));
     }
     //Auth Page
-    else if (url.pathname === '/auth' && req.method === 'POST')
-    {
+    else if (url.pathname === '/auth' && req.method === 'POST') {
         handleAuth(res, url);
     }
-    else if (url.pathname === "/register" && req.method === "POST")
-    {
+    else if (url.pathname === "/register" && req.method === "POST") {
         //Sets body
         let body = "";
 
         //Turns the info from client into string
-        req.on("data", (chunk) => {body += chunk.toString()});
+        req.on("data", (chunk) => { body += chunk.toString() });
         req.on("end", () => {
             //Parses body into JSON format
             const userData = JSON.parse(body);
@@ -213,9 +201,8 @@ const server = http.createServer((req, res) => {
         });
     }
     //Error Page
-    else
-    {
-        res.writeHead(405, {'Content-Type' : 'text/plain'});
+    else {
+        res.writeHead(405, { 'Content-Type': 'text/plain' });
         res.end("Method Not Allowed");
     }
 });
