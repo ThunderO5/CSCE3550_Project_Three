@@ -2,10 +2,14 @@ import http from "http";                //Imports HTTP Module for Server
 import crypto from "crypto";            //Imports Crypto Module for RSA Implementation
 import {v4 as uuidv4} from 'uuid';      //Imports UUID Module for Unique IDS
 import jwt from "jsonwebtoken";         //Imports JTW Module for JTW Functionality
-import sqlite3 from 'sqlite3';          //Imports SQLite3 Module for Database Functionality 
+import sqlite3 from 'sqlite3';          //Imports SQLite3 Module for Database Functionality
+import express from "express";          //Imports Express Module for Connections
 const HOSTNAME = "127.0.0.1";           //Hostname for the Server
 const PORT = 8080;                      //The Port of the Server for Incoming Requests
 const DB = new sqlite3.Database("./totally_not_my_privateKeys.db"); //Database to store private keys
+const APP = express();
+
+APP.use(express.json());
 
 //Functionality One - Generate RSA Key Pair
 function generateKeyPair(isExpired = false)
@@ -34,7 +38,7 @@ function storePrivateKeys()
     for (let i = 0; i < keys.length; i++)
     {
         let encryptedPrivateKey = encryptPrivateKeys(keys[i].privateKey);
-        DB.run("INSERT INTO keys(privateKey, exp) VALUES(?, ?)", [encryptedPrivateKey, keys[i].expiresAt]);
+        DB.run("INSERT INTO keys(key, exp) VALUES(?, ?)", [encryptedPrivateKey, keys[i].expiresAt]);
     }
 }
 
@@ -130,23 +134,28 @@ function handleAuth(res, url)
     res.end(JSON.stringify({token}));
 }
 
-/*
 //Functionality Seven - Store user registration data to Users table in the database
-function userRegister()
+function userRegister(userData, res)
 {
-    const payload = {
-        userName: "$MyCoolUsername",
-        email: "$MyCoolEmail"
-    };
+    //Reads Client's username and email
+    const { username, email } = userData;
 
-    DB.run("INSERT INTO users(username, password_hash, email, data_registered, last_login) VALUES(?, ?, ?, ?, ?)", [payload.userName, " ", payload.email, Date.now(), Date.now]);
-}*/
+    //Generates password
+    let password = uuidv4();
+
+    //Insert usernames and emails from the client and passwords generated from the sever into the Users table in the Database
+    DB.run("INSERT INTO users(username, password_hash, email, data_registered, last_login) VALUES(?, ?, ?, ?, ?)", [username, password, email, Date.now(), Date.now()]);
+
+    //Returns an OK status, and reponds with Userdata info
+    res.writeHead(200, {'Content-Type' : 'application/json'});
+    res.end(JSON.stringify({password}));
+}
+
+//Stores Private Keys to the Database before startup
+storePrivateKeys();
 
 //Functionality Eight - The Main Server Function
 const server = http.createServer((req, res) => {
-    //Stores Private Keys to the Database before startup
-    storePrivateKeys();
-    
     //Creates URL for JWKS Server
     const url = new URL(req.url, `http://${req.headers.host}`);
 
@@ -170,9 +179,12 @@ const server = http.createServer((req, res) => {
     }
     else if (url.pathname === "/register" && req.method === "POST")
     {
-        userRegister();
-        res.writeHead(200, {"Content-Type" : "text/plain"});
-        res.end();
+        let body = "";
+        req.on("data", (chunk) => {body += chunk.toString()});
+        req.on("end", () => {
+            const userData = JSON.parse(body);
+            userRegister(userData, res);
+        });
     }
     //Error Page
     else
