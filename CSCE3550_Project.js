@@ -4,6 +4,7 @@ import {v4 as uuidv4} from 'uuid';      //Imports UUID Module for Unique IDS
 import jwt from "jsonwebtoken";         //Imports JTW Module for JTW Functionality
 import sqlite3 from 'sqlite3';          //Imports SQLite3 Module for Database Functionality
 import express from "express";          //Imports Express Module for Connections
+import argon2 from "argon2";            //Imports Argon2 Module for Password Hashing
 const HOSTNAME = "127.0.0.1";           //Hostname for the Server
 const PORT = 8080;                      //The Port of the Server for Incoming Requests
 const DB = new sqlite3.Database("./totally_not_my_privateKeys.db"); //Database to store private keys
@@ -135,16 +136,23 @@ function handleAuth(res, url)
 }
 
 //Functionality Seven - Store user registration data to Users table in the database
-function userRegister(userData, res)
+async function userRegister(userData, res)
 {
     //Reads Client's username and email
     const { username, email } = userData;
 
     //Generates password
     let password = uuidv4();
+    const passwordHash = await argon2.hash(password);
+
+    //Translates Javascript Date to SQL Timestamp
+    let jsDate = new Date();
+    const isoString = jsDate.toISOString();
+    const sqlTime = isoString.slice(0, 19).replace('T', ' ');
 
     //Insert usernames and emails from the client and passwords generated from the sever into the Users table in the Database
-    DB.run("INSERT INTO users(username, password_hash, email, data_registered, last_login) VALUES(?, ?, ?, ?, ?)", [username, password, email, Date.now(), Date.now()]);
+    DB.run("INSERT INTO users(username, password_hash, email, date_registered, last_login) VALUES(?, ?, ?, ?, ?) RETURNING *",
+        [username, passwordHash, email, sqlTime, sqlTime]);
 
     //Returns an OK status, and reponds with Userdata info
     res.writeHead(200, {'Content-Type' : 'application/json'});
@@ -179,9 +187,13 @@ const server = http.createServer((req, res) => {
     }
     else if (url.pathname === "/register" && req.method === "POST")
     {
+        //Sets body
         let body = "";
+
+        //Turns the info from client into string
         req.on("data", (chunk) => {body += chunk.toString()});
         req.on("end", () => {
+            //Parses body into JSON format
             const userData = JSON.parse(body);
             userRegister(userData, res);
         });
