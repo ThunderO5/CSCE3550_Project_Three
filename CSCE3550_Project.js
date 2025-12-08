@@ -150,13 +150,27 @@ async function userRegister(userData, res)
     const isoString = jsDate.toISOString();
     const sqlTime = isoString.slice(0, 19).replace('T', ' ');
 
-    //Insert usernames and emails from the client and passwords generated from the sever into the Users table in the Database
-    DB.run("INSERT INTO users(username, password_hash, email, date_registered, last_login) VALUES(?, ?, ?, ?, ?) RETURNING *",
-        [username, passwordHash, email, sqlTime, sqlTime]);
+    // Use a Promise to await the database operation
+    try {
+        await new Promise((resolve, reject) => {
+            DB.run("INSERT INTO users(username, password_hash, email, date_registered, last_login) VALUES(?, ?, ?, ?, ?)",
+                [username, passwordHash, email, sqlTime, sqlTime], function(err) {
+                    if (err) {
+                        console.error("Database INSERT error in userRegister:", err.message);
+                        return reject(err);
+                    }
+                    resolve();
+                });
+        });
 
-    //Returns an OK status, and reponds with Userdata info
-    res.writeHead(200, {'Content-Type' : 'application/json'});
-    res.end(JSON.stringify({password}));
+        //Returns an OK status, and responds with Userdata info
+        res.writeHead(200, {'Content-Type' : 'application/json'});
+        res.end(JSON.stringify({password}));
+
+    } catch (err) {
+        res.writeHead(500, {'Content-Type' : 'application/json'});
+        res.end(JSON.stringify({error: "Failed to register user."}));
+    }
 }
 
 //Stores Private Keys to the Database before startup
